@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中国空气质量可视化系统</title>
+    <script src="/static/echarts.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .nav-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 160px;
+            height: 100vh;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 10px;
+            z-index: 100;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+        .nav-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+        .nav-btn {
+            width: 100%;
+            padding: 12px 15px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            color: #666;
+            font-size: 14px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-btn:hover { background: #e8f4fc; color: #1890ff; }
+        .nav-btn.active { background: #1890ff; color: #fff; }
+        
+        .main-content {
+            margin-left: 160px;
+            min-height: 100vh;
+        }
+        .page { display: none; min-height: 100vh; }
+        .page.active { display: block; }
+        
+        .header {
+            background: #fff;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+        .header h1 {
+            font-size: 22px;
+            color: #1890ff;
+        }
+        .stats { display: flex; gap: 30px; }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 24px; font-weight: bold; color: #1890ff; }
+        .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+        .refresh-btn {
+            padding: 8px 20px;
+            background: #1890ff;
+            border: none;
+            border-radius: 20px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .refresh-btn:hover { background: #40a9ff; }
+        
+        .filter-bar {
+            background: #fff;
+            padding: 12px 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-top: 1px solid #f0f0f0;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filter-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        .filter-select {
+            padding: 6px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 13px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .filter-select:focus { outline: none; border-color: #1890ff; }
+        .filter-input {
+            width: 70px;
+            padding: 6px 10px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+        }
+        .filter-input:focus { outline: none; border-color: #1890ff; }
+        .filter-btn {
+            padding: 6px 14px;
+            border: 1px solid #d9d9d9;
+            background: #fff;
+            border-radius: 6px;
+            color: #666;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: #1890ff; color: #1890ff; }
+        .filter-btn-reset {
+            padding: 6px 14px;
+            border: none;
+            background: #f0f0f0;
+            border-radius: 6px;
+            color: #666;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .filter-btn-reset:hover { background: #e0e0e0; }
+        .filter-count {
+            font-size: 13px;
+            color: #888;
+            margin-left: auto;
+        }
+        .filter-count strong { color: #1890ff; }
+        
+        .container { padding: 20px; }
+        .chart-box {
+            background: #fff;
+            border-radius: 16px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        #chart { width: 100%; height: 650px; }
+        
+        .province-page {
+            display: flex;
+            min-height: 100vh;
+        }
+        .left-panel {
+            width: 280px;
+            background: #fff;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 100vh;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+        }
+        .search-box { margin-bottom: 20px; }
+        .search-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            background: #fff;
+            color: #333;
+            font-size: 14px;
+        }
+        .search-input::placeholder { color: #999; }
+        .search-input:focus { outline: none; border-color: #1890ff; }
+        
+        .province-list { list-style: none; }
+        .province-item { margin-bottom: 5px; }
+        .province-btn {
+            width: 100%;
+            padding: 10px 15px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            color: #333;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+        .province-btn:hover { background: #e8f4fc; }
+        .province-btn .arrow { transition: transform 0.3s; font-size: 12px; }
+        .province-btn.expanded .arrow { transform: rotate(90deg); }
+        
+        .city-list { list-style: none; padding-left: 20px; display: none; }
+        .city-list.show { display: block; }
+        .city-item {
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            color: #666;
+        }
+        .city-item:hover { background: #e8f4fc; color: #1890ff; }
+        .city-item.selected { background: #1890ff; color: #fff; }
+        
+        .right-panel {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        .data-header {
+            background: #fff;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .data-title { font-size: 20px; font-weight: bold; color: #333; }
+        .data-subtitle { font-size: 14px; color: #888; }
+        .aqi-badge {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .aqi-1 { background: #00e400; color: #000; }
+        .aqi-2 { background: #ffff00; color: #000; }
+        .aqi-3 { background: #ff7e00; color: #000; }
+        .aqi-4 { background: #ff0000; color: #fff; }
+        .aqi-5 { background: #99004c; color: #fff; }
+        .aqi-6 { background: #7e0023; color: #fff; }
+        
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .data-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .data-card .label { font-size: 12px; color: #888; margin-bottom: 8px; }
+        .data-card .value { font-size: 24px; font-weight: bold; color: #1890ff; }
+        .data-card .unit { font-size: 11px; color: #999; }
+        
+        .chart-section {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .chart-title {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #chart24h { width: 100%; height: 350px; }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #888;
+            font-size: 16px;
+        }
+        
+        .loading {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            font-size: 24px; color: #1890ff;
+        }
+        
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.45); display: none; z-index: 999; }
+        .overlay.show { display: block; }
+        
+        .card {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            background: #e8f4fc; border-radius: 16px; width: 280px; max-height: 90vh;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); display: none; z-index: 1001;
+            border: 1px solid #b8d4f0; padding: 25px;
+        }
+        .card.show { display: block; animation: fadeIn 0.3s; }
+        .card-header { text-align: center; }
+        .card-title { font-size: 20px; font-weight: bold; color: #1890ff; }
+        .card-subtitle { font-size: 13px; color: #666; margin-top: 5px; }
+        .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .card-item { background: #fff; padding: 10px; border-radius: 8px; text-align: center; }
+        .card-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+        .card-value { font-size: 16px; font-weight: bold; color: #1890ff; }
+        .card .aqi-badge { margin: 10px 0 15px; text-align: center; }
+        
+        .history-modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+            background: #fff; border-radius: 16px; width: 900px; max-width: 90vw;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2); display: none; z-index: 1001;
+            border: 1px solid #eee;
+        }
+        .history-modal.show { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translate(-50%,-50%) scale(0.9); } to { opacity: 1; transform: translate(-50%,-50%) scale(1); } }
+        .history-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 25px; border-bottom: 1px solid #eee;
+        }
+        .history-title { font-size: 18px; font-weight: bold; color: #333; }
+        .history-source { font-size: 12px; color: #52c41a; margin-left: 10px; }
+        .history-body { padding: 20px 25px; max-height: 70vh; overflow-y: auto; }
+        #chartHistory { width: 100%; height: 400px; }
+        .history-close { 
+            width: 32px; height: 32px; border: none; background: #f0f0f0; border-radius: 50%;
+            color: #666; font-size: 18px; cursor: pointer; transition: all 0.3s;
+        }
+        .history-close:hover { background: #ff4d4f; color: #fff; }
+        
+        .date-range-picker {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 15px;
+            padding: 10px; background: #f5f5f5; border-radius: 8px;
+        }
+        .date-input {
+            padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; width: 130px;
+            background: #fff; color: #333;
+        }
+        .date-input:focus { outline: none; border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.2); }
+        
+        .history-tabs {
+            display: flex; gap: 10px; margin-bottom: 15px;
+        }
+        .history-tab {
+            padding: 8px 16px; border: 1px solid #d9d9d9; border-radius: 6px;
+            background: #fff; color: #666; font-size: 13px; cursor: pointer; transition: all 0.2s;
+        }
+        .history-tab:hover { border-color: #1890ff; color: #1890ff; }
+        .history-tab.active { background: #1890ff; border-color: #1890ff; color: #fff; }
+        
+        .history-btn {
+            padding: 6px 16px; background: #1890ff; border: none; border-radius: 6px;
+            color: #fff; font-size: 13px; cursor: pointer; transition: all 0.2s;
+        }
+        .history-btn:hover { background: #40a9ff; }
+        
+        #officialContainer { display: none; height: 70vh; min-height: 500px; }
+        #officialIframe { width: 100%; height: 100%; border: none; border-radius: 8px; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">正在加载数据...</div>
+    
+    <div class="overlay" id="overlay"></div>
+    <div class="overlay" id="historyOverlay"></div>
+    
+    <div class="history-modal" id="historyModal">
+        <div class="history-header">
+            <div style="display:flex;align-items:center;">
+                <span class="history-title" id="historyTitle">历史数据</span>
+                <span class="history-source" id="historySource"></span>
+            </div>
+            <button class="history-close" onclick="closeHistoryModal()">×</button>
+        </div>
+        <div class="history-body">
+            <div class="date-range-picker">
+                <span style="color:#666;font-size:13px;">日期范围:</span>
+                <input type="date" class="date-input" id="historyStartDate">
+                <span style="color:#666;">至</span>
+                <input type="date" class="date-input" id="historyEndDate">
+                <button class="history-btn" onclick="applyHistoryDateRange()">查询</button>
+                <div style="flex:1"></div>
+                <button class="history-btn" id="officialBtn" onclick="showOfficialData()">官网数据</button>
+            </div>
+            <div class="history-tabs" id="chartTabs">
+                <button class="history-tab active" data-indicator="aqi" onclick="switchHistoryTab('aqi')">AQI</button>
+                <button class="history-tab" data-indicator="pm25" onclick="switchHistoryTab('pm25')">PM2.5</button>
+                <button class="history-tab" data-indicator="pm10" onclick="switchHistoryTab('pm10')">PM10</button>
+                <button class="history-tab" data-indicator="so2" onclick="switchHistoryTab('so2')">SO₂</button>
+                <button class="history-tab" data-indicator="no2" onclick="switchHistoryTab('no2')">NO₂</button>
+                <button class="history-tab" data-indicator="co" onclick="switchHistoryTab('co')">CO</button>
+                <button class="history-tab" data-indicator="o3" onclick="switchHistoryTab('o3')">O₃</button>
+            </div>
+            <div id="chartHistory"></div>
+            <div id="officialContainer">
+                <iframe id="officialIframe" loading="lazy"></iframe>
+            </div>
+        </div>
+    </div>
+    
+    <nav class="nav-sidebar">
+        <div class="nav-title">空气质量系统</div>
+        <button class="nav-btn active" id="navMap" onclick="switchPage('map')">📍 地图视图</button>
+        <button class="nav-btn" id="navList" onclick="switchPage('list')">📋 城市列表</button>
+        <button class="nav-btn" id="navPredict" onclick="switchPage('predict')">📈 空气质量预测</button>
+    </nav>
+    
+    <div class="main-content">
+        <div class="page active" id="pageMap">
+            <div class="header">
+                <div class="header-left">
+                    <h1>中国空气质量可视化系统</h1>
+                    <div class="stats">
+                        <div class="stat-item"><div class="stat-value" id="total">-</div><div class="stat-label">监测城市</div></div>
+                        <div class="stat-item"><div class="stat-value" id="avgAqi">-</div><div class="stat-label">平均AQI</div></div>
+                        <div class="stat-item"><div class="stat-value" id="rateExcellent">-</div><div class="stat-label">优率</div></div>
+                        <div class="stat-item"><div class="stat-value" id="rateGood">-</div><div class="stat-label">优良率</div></div>
+                        <div class="stat-item"><div class="stat-value" id="rateLight">-</div><div class="stat-label">优良轻</div></div>
+                    </div>
+                </div>
+                <button class="refresh-btn" id="refreshBtn" onclick="refreshData()">刷新数据</button>
+            </div>
+            <div class="filter-bar">
+                <div class="filter-group">
+                    <span class="filter-label">AQI:</span>
+                    <select class="filter-select" id="filterPreset" onchange="handlePresetChange()">
+                        <option value="">全部</option>
+                        <option value="0-50">优 (AQI ≤ 50)</option>
+                        <option value="51-100">良 (AQI 51-100)</option>
+                        <option value="101-150">轻度污染 (AQI 101-150)</option>
+                        <option value="151-200">中度污染 (AQI 151-200)</option>
+                        <option value="201-300">重度污染 (AQI 201-300)</option>
+                        <option value="301+">严重污染 (AQI > 300)</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                </div>
+                <div class="filter-group" id="customFilterGroup" style="display:none;">
+                    <span class="filter-label">AQI:</span>
+                    <input type="number" class="filter-input" id="filterMin" placeholder="最小" min="0">
+                    <span class="filter-label">-</span>
+                    <input type="number" class="filter-input" id="filterMax" placeholder="最大" min="0">
+                    <button class="filter-btn" onclick="applyFilter()">应用</button>
+                </div>
+                <div class="filter-group">
+                    <span class="filter-label">省份:</span>
+                    <select class="filter-select" id="filterProvince" onchange="onProvinceChange()">
+                        <option value="">全部省份</option>
+                    </select>
+                </div>
+                <button class="filter-btn-reset" onclick="resetFilter()">重置</button>
+                <div class="filter-count" id="filterCount">显示 <strong>-</strong> / <strong>-</strong> 个城市</div>
+            </div>
+            <div class="container">
+                <div class="chart-box">
+                    <div id="chart"></div>
+                </div>
+            </div>
+        </div>
+        <div class="page" id="pageList">
+        <div class="province-page">
+            <div class="left-panel">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchInput" placeholder="搜索城市..." oninput="searchCity()">
+                </div>
+                <ul class="province-list" id="provinceList"></ul>
+            </div>
+            <div class="right-panel" id="rightPanel">
+                <div class="no-data">请从左侧选择或搜索城市查看数据</div>
+            </div>
+        </div>
+    </div>
+    <div class="page" id="pagePredict">
+        <div class="province-page">
+            <div class="left-panel">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="predictSearchInput" placeholder="搜索城市..." oninput="searchPredictCity()">
+                </div>
+                <ul class="province-list" id="predictProvinceList"></ul>
+            </div>
+            <div class="right-panel" id="predictRightPanel">
+                <div class="no-data">请从左侧选择或搜索城市进行预测</div>
+            </div>
+        </div>
+    </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title" id="cName">-</div>
+            <div class="card-subtitle" id="cProvince">-</div>
+        </div>
+        <div class="aqi-badge" id="cAqi">AQI: -</div>
+        <div class="card-grid">
+            <div class="card-item"><div class="card-label">PM2.5</div><div class="card-value" id="cPm25">-</div></div>
+            <div class="card-item"><div class="card-label">PM10</div><div class="card-value" id="cPm10">-</div></div>
+            <div class="card-item"><div class="card-label">SO₂</div><div class="card-value" id="cSo2">-</div></div>
+            <div class="card-item"><div class="card-label">NO₂</div><div class="card-value" id="cNo2">-</div></div>
+            <div class="card-item"><div class="card-label">CO</div><div class="card-value" id="cCo">-</div></div>
+            <div class="card-item"><div class="card-label">O₃</div><div class="card-value" id="cO3">-</div></div>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let chart24h = null;
+        let historyChart = null;
+        let mapLoaded = false;
+        let cityData = [];
+        let filteredData = [];
+        let provincesData = {};
+        let selectedCity = null;
+        let currentZoom = 1.2;
+        let historyData = [];
+        let currentHistoryIndicator = 'aqi';
+        let currentHistoryCity = '';
+        let showingOfficial = false;
+        
+        function getColor(aqi) {
+            if (aqi <= 50) return '#00e400';
+            if (aqi <= 100) return '#ffff00';
+            if (aqi <= 150) return '#ff7e00';
+            if (aqi <= 200) return '#ff0000';
+            if (aqi <= 300) return '#99004c';
+            return '#7e0023';
+        }
+        
+        function getLevel(aqi) {
+            if (aqi <= 50) return '优';
+            if (aqi <= 100) return '良';
+            if (aqi <= 150) return '轻度污染';
+            if (aqi <= 200) return '中度污染';
+            if (aqi <= 300) return '重度污染';
+            return '严重污染';
+        }
+        
+        function getAqiClass(aqi) {
+            if (aqi <= 50) return 'aqi-1';
+            if (aqi <= 100) return 'aqi-2';
+            if (aqi <= 150) return 'aqi-3';
+            if (aqi <= 200) return 'aqi-4';
+            if (aqi <= 300) return 'aqi-5';
+            return 'aqi-6';
+        }
+        
+        function switchPage(page) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            if (page === 'map') {
+                document.getElementById('pageMap').classList.add('active');
+                document.getElementById('navMap').classList.add('active');
+                setTimeout(() => chart && chart.resize(), 100);
+            } else if (page === 'list') {
+                document.getElementById('pageList').classList.add('active');
+                document.getElementById('navList').classList.add('active');
+            } else if (page === 'predict') {
+                document.getElementById('pagePredict').classList.add('active');
+                document.getElementById('navPredict').classList.add('active');
+                renderPredictProvinces();
+            }
+        }
+        
+        async function loadMap() {
+            try {
+                const res = await fetch('/china_map.json');
+                const mapData = await res.json();
+                echarts.registerMap('china', mapData);
+                mapLoaded = true;
+            } catch (e) {
+                console.error('地图加载失败:', e);
+            }
+        }
+        
+        async function fetchData() {
+            try {
+                const [citiesRes, provincesRes] = await Promise.all([
+                    fetch('/api/cities'),
+                    fetch('/api/provinces')
+                ]);
+                const citiesResult = await citiesRes.json();
+                const provincesResult = await provincesRes.json();
+                cityData = citiesResult.data || [];
+                filteredData = [...cityData];
+                provincesData = provincesResult.data || {};
+                updateStats();
+                updateFilterCount();
+                await initChart();
+                loadProvinceOptions();
+                renderProvinces();
+                document.getElementById('loading').style.display = 'none';
+            } catch (e) {
+                console.error('加载失败:', e);
+                document.getElementById('loading').textContent = '加载失败: ' + e.message;
+            }
+        }
+        
+        async function refreshData() {
+            const btn = document.getElementById('refreshBtn');
+            btn.disabled = true;
+            btn.textContent = '刷新中...';
+            try {
+                const res = await fetch('/api/cities?save=true');
+                const result = await res.json();
+                const newData = result.data || [];
+                if (newData.length > 0) {
+                    const existingMap = {};
+                    cityData.forEach(c => {
+                        existingMap[c.cityname] = c;
+                    });
+                    newData.forEach(c => {
+                        existingMap[c.cityname] = c;
+                    });
+                    cityData = Object.values(existingMap);
+                    filteredData = [...cityData];
+                }
+                updateStats();
+                updateFilterCount();
+                loadProvinceOptions();
+                await initChart();
+            } catch (e) {
+                alert('刷新失败: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '刷新数据';
+            }
+        }
+        
+        function updateStats() {
+            if (cityData.length === 0) return;
+            const province = document.getElementById('filterProvince')?.value || '';
+            let statsData = cityData;
+            if (province) {
+                statsData = cityData.filter(c => c.province === province);
+            }
+            if (statsData.length === 0) return;
+            const total = statsData.length;
+            document.getElementById('total').textContent = total;
+            const avg = statsData.reduce((s, c) => s + (c.aqi || 0), 0) / total;
+            document.getElementById('avgAqi').textContent = Math.round(avg);
+            const excellent = statsData.filter(c => c.aqi <= 50).length;
+            const good = statsData.filter(c => c.aqi <= 100).length;
+            const light = statsData.filter(c => c.aqi <= 150).length;
+            document.getElementById('rateExcellent').textContent = (excellent / total * 100).toFixed(1) + '%';
+            document.getElementById('rateGood').textContent = (good / total * 100).toFixed(1) + '%';
+            document.getElementById('rateLight').textContent = (light / total * 100).toFixed(1) + '%';
+        }
+        
+        function applyFilter() {
+            const preset = document.getElementById('filterPreset').value;
+            const province = document.getElementById('filterProvince').value;
+            const minAqi = parseInt(document.getElementById('filterMin').value) || 0;
+            const maxAqi = parseInt(document.getElementById('filterMax').value) || Infinity;
+            filteredData = cityData.filter(c => {
+                const aqi = c.aqi || 0;
+                let matchPreset = true;
+                if (preset) {
+                    if (preset === 'custom') {
+                        matchPreset = aqi >= minAqi && aqi <= maxAqi;
+                    } else if (preset === '0-50') {
+                        matchPreset = aqi <= 50;
+                    } else if (preset === '51-100') {
+                        matchPreset = aqi >= 51 && aqi <= 100;
+                    } else if (preset === '101-150') {
+                        matchPreset = aqi >= 101 && aqi <= 150;
+                    } else if (preset === '151-200') {
+                        matchPreset = aqi >= 151 && aqi <= 200;
+                    } else if (preset === '201-300') {
+                        matchPreset = aqi >= 201 && aqi <= 300;
+                    } else if (preset === '301+') {
+                        matchPreset = aqi > 300;
+                    }
+                }
+                let matchProvince = !province || c.province === province;
+                return matchPreset && matchProvince;
+            });
+            updateChartData();
+            updateFilterCount();
+        }
+        
+        function resetFilter() {
+            document.getElementById('filterPreset').value = '';
+            document.getElementById('filterProvince').value = '';
+            document.getElementById('filterMin').value = '';
+            document.getElementById('filterMax').value = '';
+            document.getElementById('customFilterGroup').style.display = 'none';
+            filteredData = [...cityData];
+            updateChartData();
+            updateFilterCount();
+            updateStats();
+        }
+        
+        function handlePresetChange() {
+            const preset = document.getElementById('filterPreset').value;
+            const customGroup = document.getElementById('customFilterGroup');
+            if (preset === 'custom') {
+                customGroup.style.display = 'flex';
+            } else {
+                customGroup.style.display = 'none';
+                applyFilter();
+            }
+        }
+        
+        function onProvinceChange() {
+            applyFilter();
+            updateStats();
+        }
+        
+        function updateFilterCount() {
+            document.getElementById('filterCount').innerHTML = '显示 <strong>' + filteredData.length + '</strong> / <strong>' + cityData.length + '</strong> 个城市';
+        }
+        
+        function updateChartData() {
+            if (!chart) return;
+            const scatterData = filteredData.map(c => ({
+                name: c.cityname,
+                value: [c.longitude, c.latitude, c.aqi || 0],
+                cityname: c.cityname,
+                province: c.province,
+                aqi: c.aqi,
+                pm25: c.pm25, pm10: c.pm10, so2: c.so2, no2: c.no2, co: c.co, o3: c.o3,
+                level: c.levelindex
+            })).filter(d => d.value[0] && d.value[1]);
+            chart.setOption({ series: [{ data: scatterData, label: { show: currentZoom > 1.8 } }] });
+        }
+        
+        async function initChart() {
+            if (!mapLoaded) {
+                await loadMap();
+            }
+            if (chart) {
+                chart.dispose();
+            }
+            chart = echarts.init(document.getElementById('chart'));
+            const scatterData = filteredData.map(c => ({
+                name: c.cityname,
+                value: [c.longitude, c.latitude, c.aqi || 0],
+                cityname: c.cityname,
+                province: c.province,
+                aqi: c.aqi,
+                pm25: c.pm25, pm10: c.pm10, so2: c.so2, no2: c.no2, co: c.co, o3: c.o3,
+                level: c.levelindex
+            })).filter(d => d.value[0] && d.value[1]);
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'item',
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    borderColor: '#ddd',
+                    textStyle: { color: '#333' },
+                    formatter: function(p) {
+                        if (!p.data) return '';
+                        const d = p.data;
+                        return '<div style="font-size:14px;font-weight:bold;margin-bottom:5px;color:#333">' + d.name + '</div>' +
+                               '<div style="color:#888;margin-bottom:5px">' + (d.province || '') + '</div>' +
+                               '<div style="font-size:22px;color:' + getColor(d.value[2]) + ';font-weight:bold">AQI: ' + d.value[2] + '</div>' +
+                               '<div style="color:' + getColor(d.value[2]) + '">' + (d.level || '') + '</div>';
+                    }
+                },
+                geo: {
+                    map: 'china',
+                    roam: true,
+                    zoom: currentZoom,
+                    label: { show: false },
+                    itemStyle: { areaColor: '#e6f0ff', borderColor: '#91c7ff', borderWidth: 1 },
+                    emphasis: { itemStyle: { areaColor: '#bed8ff' }, label: { show: false } }
+                },
+                series: [{
+                    name: '监测点',
+                    type: 'scatter',
+                    coordinateSystem: 'geo',
+                    data: scatterData,
+                    symbolSize: function(val) { return Math.max(6, Math.min(18, val[2] / 25)); },
+                    itemStyle: { color: function(p) { return getColor(p.data.value[2]); }, shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.3)' },
+                    label: { show: currentZoom > 1.8, formatter: function(p) { return p.data.name; }, position: 'bottom', distance: 5, fontSize: 10, color: '#333', textShadowBlur: 2, textShadowColor: '#fff' },
+                    emphasis: { scale: 1.5 }
+                }]
+            };
+            chart.setOption(option, true);
+            chart.on('georoam', function() {
+                const opt = chart.getOption();
+                const zoom = opt.geo[0].zoom;
+                currentZoom = zoom;
+                chart.setOption({ series: [{ label: { show: zoom > 1.8 } }] });
+            });
+            chart.on('click', function(p) {
+                if (p.data && p.data.cityname) showCard(p.data);
+            });
+            window.onresize = () => chart.resize();
+        }
+        
+        function showCard(d) {
+            document.getElementById('overlay').classList.add('show');
+            document.getElementById('overlay').onclick = closeCard;
+            document.querySelector('.card').classList.add('show');
+            document.getElementById('cName').textContent = d.cityname;
+            document.getElementById('cProvince').textContent = d.province || '';
+            document.getElementById('cAqi').textContent = 'AQI: ' + d.aqi;
+            document.getElementById('cAqi').className = 'aqi-badge ' + getAqiClass(d.aqi);
+            document.getElementById('cPm25').textContent = d.pm25 || '-';
+            document.getElementById('cPm10').textContent = d.pm10 || '-';
+            document.getElementById('cSo2').textContent = d.so2 || '-';
+            document.getElementById('cNo2').textContent = d.no2 || '-';
+            document.getElementById('cCo').textContent = d.co || '-';
+            document.getElementById('cO3').textContent = d.o3 || '-';
+        }
+        
+        function closeCard() {
+            document.getElementById('overlay').classList.remove('show');
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('show'));
+        }
+        
+        async function loadProvinces() {
+            try {
+                const res = await fetch('/api/provinces');
+                const result = await res.json();
+                provincesData = result.data || {};
+                renderProvinces();
+            } catch (e) {
+                console.error('加载省份失败:', e);
+            }
+        }
+        
+        function loadProvinceOptions() {
+            const select = document.getElementById('filterProvince');
+            let provinces = [];
+            
+            if (cityData.length > 0) {
+                const provinceMap = {};
+                cityData.forEach(c => {
+                    if (c.province) {
+                        provinceMap[c.province] = true;
+                    }
+                });
+                provinces = Object.keys(provinceMap).sort();
+            } else {
+                provinces = Object.keys(provincesData).sort();
+            }
+            
+            select.innerHTML = '<option value="">全部省份</option>';
+            provinces.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p;
+                option.textContent = p;
+                select.appendChild(option);
+            });
+        }
+        
+        function renderProvinces(filterText = '') {
+            const list = document.getElementById('provinceList');
+            if (!list) return;
+            list.innerHTML = '';
+            
+            let provinceMap = {};
+            if (cityData.length > 0) {
+                cityData.forEach(c => {
+                    if (c.province) {
+                        if (!provinceMap[c.province]) {
+                            provinceMap[c.province] = [];
+                        }
+                        if (!provinceMap[c.province].includes(c.cityname)) {
+                            provinceMap[c.province].push(c.cityname);
+                        }
+                    }
+                });
+            } else {
+                provinceMap = provincesData;
+            }
+            
+            const provinces = Object.keys(provinceMap).sort();
+            
+            if (provinces.length === 0) {
+                list.innerHTML = '<li style="padding:15px;color:#999;">暂无省份数据</li>';
+                return;
+            }
+            if (filterText) {
+                const matchedCities = [];
+                for (const [province, cities] of Object.entries(provinceMap)) {
+                    for (const city of cities) {
+                        if (city.includes(filterText)) {
+                            matchedCities.push({ name: city, province: province });
+                        }
+                    }
+                }
+                matchedCities.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'city-item';
+                    li.textContent = item.name;
+                    li.onclick = function() {
+                        selectCity(item.name, item.province);
+                        document.querySelectorAll('.city-item').forEach(ci => ci.classList.remove('selected'));
+                        li.classList.add('selected');
+                    };
+                    list.appendChild(li);
+                });
+                return;
+            }
+            for (const [province, cities] of Object.entries(provinceMap)) {
+                const li = document.createElement('li');
+                li.className = 'province-item';
+                const btn = document.createElement('button');
+                btn.className = 'province-btn';
+                btn.innerHTML = '<span>' + province + '</span><span class="arrow">▶</span>';
+                btn.onclick = function() {
+                    const cityList = li.querySelector('.city-list');
+                    const isShow = cityList.classList.contains('show');
+                    document.querySelectorAll('.city-list').forEach(cl => cl.classList.remove('show'));
+                    document.querySelectorAll('.province-btn').forEach(pb => pb.classList.remove('expanded'));
+                    if (!isShow) {
+                        cityList.classList.add('show');
+                        btn.classList.add('expanded');
+                    }
+                };
+                const cityUl = document.createElement('ul');
+                cityUl.className = 'city-list';
+                cities.forEach(city => {
+                    const cityLi = document.createElement('li');
+                    cityLi.className = 'city-item';
+                    cityLi.textContent = city;
+                    cityLi.onclick = function(e) {
+                        e.stopPropagation();
+                        selectCity(city, province);
+                        document.querySelectorAll('.city-item').forEach(ci => ci.classList.remove('selected'));
+                        cityLi.classList.add('selected');
+                    };
+                    cityUl.appendChild(cityLi);
+                });
+                li.appendChild(btn);
+                li.appendChild(cityUl);
+                list.appendChild(li);
+            }
+        }
+        
+        function searchCity() {
+            const text = document.getElementById('searchInput').value;
+            renderProvinces(text);
+        }
+        
+        async function selectCity(cityName, province) {
+            const cityInfo = cityData.find(c => c.cityname === cityName || c.cityname === cityName.replace('市', ''));
+            const panel = document.getElementById('rightPanel');
+            if (!cityInfo) {
+                panel.innerHTML = '<div class="no-data">未找到 "' + cityName + '" 的实时数据</div>';
+                return;
+            }
+            selectedCity = cityName;
+            panel.innerHTML = `
+                <div class="data-header">
+                    <div>
+                        <div class="data-title">` + cityInfo.cityname + `</div>
+                        <div class="data-subtitle">` + cityInfo.province + `</div>
+                    </div>
+                    <div class="aqi-badge ` + getAqiClass(cityInfo.aqi) + `">AQI: ` + cityInfo.aqi + ` (` + getLevel(cityInfo.aqi) + `)</div>
+                </div>
+                <div class="data-grid">
+                    <div class="data-card"><div class="label">PM2.5</div><div class="value">` + (cityInfo.pm25 || '-') + `<span class="unit">μg/m³</span></div></div>
+                    <div class="data-card"><div class="label">PM10</div><div class="value">` + (cityInfo.pm10 || '-') + `<span class="unit">μg/m³</span></div></div>
+                    <div class="data-card"><div class="label">SO₂</div><div class="value">` + (cityInfo.so2 || '-') + `<span class="unit">μg/m³</span></div></div>
+                    <div class="data-card"><div class="label">NO₂</div><div class="value">` + (cityInfo.no2 || '-') + `<span class="unit">μg/m³</span></div></div>
+                    <div class="data-card"><div class="label">CO</div><div class="value">` + (cityInfo.co || '-') + `<span class="unit">mg/m³</span></div></div>
+                    <div class="data-card"><div class="label">O₃</div><div class="value">` + (cityInfo.o3 || '-') + `<span class="unit">μg/m³</span></div></div>
+                    <div class="data-card"><div class="label">首要污染物</div><div class="value" style="font-size:16px">` + (cityInfo.primary_pollutant || '无') + `</div></div>
+                </div>
+                <div class="chart-section">
+                    <div class="chart-title" style="display:flex;justify-content:space-between;align-items:center;">
+                        <span>24小时趋势</span>
+                        <button class="history-btn" onclick="openHistoryModal('` + cityName + `')">📅 历史数据</button>
+                    </div>
+                    <div id="chart24h"></div>
+                </div>
+            `;
+            await load24hData(cityName);
+        }
+        
+        async function load24hData(cityName) {
+            try {
+                const chartContainer = document.getElementById('chart24h');
+                if (!chartContainer) return;
+                chartContainer.innerHTML = '<div style="text-align:center;padding:50px;color:#1890ff;font-size:14px;">正在加载24小时数据...</div>';
+                
+                const res = await fetch('/api/cities/24h?cityname=' + encodeURIComponent(cityName));
+                const result = await res.json();
+                if (result.code !== 200 || !result.data) {
+                    chartContainer.innerHTML = '<div class="no-data">暂无24小时数据</div>';
+                    return;
+                }
+                const sourceText = result.source || '未知';
+                const sourceColor = sourceText.includes('缓存') ? '#52c41a' : '#1890ff';
+                render24hChart(result.data, sourceText);
+            } catch (e) {
+                console.error('加载24小时数据失败:', e);
+                const chartContainer = document.getElementById('chart24h');
+                if (chartContainer) chartContainer.innerHTML = '<div class="no-data">加载失败</div>';
+            }
+        }
+        
+        function render24hChart(data, source = '') {
+            if (chart24h) {
+                chart24h.dispose();
+            }
+            const chartContainer = document.getElementById('chart24h');
+            if (!chartContainer) return;
+            chart24h = echarts.init(chartContainer);
+            const indicators = ['aqi', 'pm25', 'pm10', 'so2', 'no2', 'co', 'o3'];
+            const labels = ['AQI', 'PM2.5', 'PM10', 'SO₂', 'NO₂', 'CO', 'O₃'];
+            const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9', '#a29bfe'];
+            const timeData = data.aqi?.map(d => d.time) || [];
+            const series = indicators.map((ind, i) => ({
+                name: labels[i],
+                type: 'line',
+                yAxisIndex: i === 5 ? 1 : 0,
+                data: data[ind]?.map(d => d.value) || [],
+                smooth: true,
+                lineStyle: { width: 2, color: colors[i] },
+                itemStyle: { color: colors[i] },
+                emphasis: { scale: true }
+            }));
+            const sourceInfo = source ? '<span style="color:#52c41a;font-size:12px;margin-left:10px;">来源: ' + source + '</span>' : '';
+            const option = {
+                backgroundColor: 'transparent',
+                title: { text: '24小时趋势', left: 10, top: 5, textStyle: { fontSize: 14, color: '#333', fontWeight: 'normal' } },
+                tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', textStyle: { color: '#333' } },
+                legend: { data: labels, textStyle: { color: '#333', fontSize: 11 }, top: 30, type: 'scroll' },
+                grid: { left: 50, right: 20, top: 70, bottom: 50 },
+                xAxis: { type: 'category', data: timeData, axisLine: { lineStyle: { color: '#ccc' } }, axisLabel: { color: '#888' } },
+                yAxis: [
+                    { type: 'value', name: '浓度', axisLine: { lineStyle: { color: '#ccc' } }, axisLabel: { color: '#888' }, splitLine: { lineStyle: { color: '#eee' } } },
+                    { type: 'value', name: 'CO', axisLine: { lineStyle: { color: '#ccc' } }, axisLabel: { color: '#888' }, splitLine: { show: false } }
+                ],
+                series: series
+            };
+            chart24h.setOption(option);
+            window.addEventListener('resize', () => chart24h && chart24h.resize());
+        }
+        
+        function getDefaultDateRange() {
+            const now = new Date();
+            const end = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+            const start = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+            const formatDate = (d) => {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return year + '-' + month + '-' + day;
+            };
+            const startStr = formatDate(start);
+            const endStr = formatDate(end);
+            const today = formatDate(now);
+            const startInput = document.getElementById('historyStartDate');
+            const endInput = document.getElementById('historyEndDate');
+            if (startInput) startInput.min = '2020-01-01';
+            if (startInput) startInput.max = today;
+            if (endInput) endInput.min = '2020-01-01';
+            if (endInput) endInput.max = today;
+            return { start: startStr, end: endStr };
+        }
+        
+        function openHistoryModal(cityName) {
+            currentHistoryCity = cityName;
+            currentHistoryIndicator = 'aqi';
+            showingOfficial = false;
+            const defaultRange = getDefaultDateRange();
+            const startInput = document.getElementById('historyStartDate');
+            const endInput = document.getElementById('historyEndDate');
+            if (startInput) startInput.value = defaultRange.start;
+            if (endInput) endInput.value = defaultRange.end;
+            document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.history-tab[data-indicator="aqi"]').classList.add('active');
+            document.getElementById('historyTitle').textContent = cityName + ' - 历史数据';
+            document.getElementById('historySource').innerHTML = '数据来源: <span style="color:#faad14;">正在查询...</span>';
+            const historyOverlay = document.getElementById('historyOverlay');
+            if (historyOverlay) historyOverlay.classList.add('show');
+            document.getElementById('historyModal').classList.add('show');
+            document.getElementById('chartTabs').style.display = 'flex';
+            document.getElementById('chartHistory').style.display = 'block';
+            document.getElementById('officialContainer').style.display = 'none';
+            document.getElementById('officialBtn').textContent = '官网数据';
+            loadHistoryData(cityName, defaultRange.start, defaultRange.end);
+        }
+        
+        function closeHistoryModal() {
+            const modal = document.getElementById('historyModal');
+            const historyOverlay = document.getElementById('historyOverlay');
+            if (modal) modal.classList.remove('show');
+            if (historyOverlay) {
+                historyOverlay.classList.remove('show');
+                historyOverlay.style.display = 'none';
+            }
+            const iframe = document.getElementById('officialIframe');
+            if (iframe) iframe.src = 'about:blank';
+        }
+        
+        function switchHistoryTab(indicator) {
+            currentHistoryIndicator = indicator;
+            document.querySelectorAll('.history-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('.history-tab[data-indicator="' + indicator + '"]').classList.add('active');
+            renderHistoryChart();
+        }
+        
+        function applyHistoryDateRange() {
+            const startInput = document.getElementById('historyStartDate');
+            const endInput = document.getElementById('historyEndDate');
+            const start = startInput ? startInput.value : '';
+            const end = endInput ? endInput.value : '';
+            if (!start || !end) {
+                return;
+            }
+            if (new Date(start) > new Date(end)) {
+                return;
+            }
+            showingOfficial = false;
+            document.getElementById('chartTabs').style.display = 'flex';
+            document.getElementById('chartHistory').style.display = 'block';
+            document.getElementById('officialContainer').style.display = 'none';
+            document.getElementById('officialBtn').textContent = '官网数据';
+            loadHistoryData(currentHistoryCity, start, end);
+        }
+        
+        async function showOfficialData() {
+            if (showingOfficial) {
+                showingOfficial = false;
+                document.getElementById('chartTabs').style.display = 'flex';
+                document.getElementById('chartHistory').style.display = 'block';
+                document.getElementById('officialContainer').style.display = 'none';
+                document.getElementById('officialBtn').textContent = '官网数据';
+                return;
+            }
+            showingOfficial = true;
+            document.getElementById('chartTabs').style.display = 'none';
+            document.getElementById('chartHistory').style.display = 'none';
+            document.getElementById('officialContainer').style.display = 'block';
+            document.getElementById('officialBtn').textContent = '返回图表';
+            const normalizedCity = currentHistoryCity.replace(/市|地区/g, '');
+            const cityUrlName = normalizedCity.length > 4 ? normalizedCity.substring(0, 6) : normalizedCity;
+            const iframeUrl = 'http://eairmap.cn/?city=' + encodeURIComponent(cityUrlName);
+            document.getElementById('historySource').innerHTML = '数据来源: <a href="' + iframeUrl + '" target="_blank" style="color:#1890ff;">官网 - 点击访问</a>';
+            document.getElementById('officialIframe').src = iframeUrl;
+        }
+        
+        function renderPredictProvinces(filterText = '') {
+            const list = document.getElementById('predictProvinceList');
+            if (!list) return;
+            list.innerHTML = '';
+            
+            let provinceMap = {};
+            if (cityData.length > 0) {
+                cityData.forEach(c => {
+                    if (c.province) {
+                        if (!provinceMap[c.province]) {
+                            provinceMap[c.province] = [];
+                        }
+                        if (!provinceMap[c.province].includes(c.cityname)) {
+                            provinceMap[c.province].push(c.cityname);
+                        }
+                    }
+                });
+            } else {
+                provinceMap = provincesData;
+            }
+            
+            const provinces = Object.keys(provinceMap).sort();
+            
+            if (provinces.length === 0) {
+                list.innerHTML = '<li style="padding:15px;color:#999;">暂无省份数据</li>';
+                return;
+            }
+            
+            if (filterText) {
+                const matchedCities = [];
+                for (const [province, cities] of Object.entries(provinceMap)) {
+                    for (const city of cities) {
+                        if (city.includes(filterText)) {
+                            matchedCities.push({ name: city, province: province });
+                        }
+                    }
+                }
+                matchedCities.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'city-item';
+                    li.textContent = item.name;
+                    li.onclick = function() {
+                        predictCity(item.name, item.province);
+                        document.querySelectorAll('.city-item').forEach(ci => ci.classList.remove('selected'));
+                        li.classList.add('selected');
+                    };
+                    list.appendChild(li);
+                });
+                return;
+            }
+            
+            for (const [province, cities] of Object.entries(provinceMap)) {
+                const li = document.createElement('li');
+                li.className = 'province-item';
+                const btn = document.createElement('button');
+                btn.className = 'province-btn';
+                btn.innerHTML = '<span>' + province + '</span><span class="arrow">▶</span>';
+                btn.onclick = function() {
+                    const cityList = li.querySelector('.city-list');
+                    const isShow = cityList.classList.contains('show');
+                    document.querySelectorAll('.city-list').forEach(cl => cl.classList.remove('show'));
+                    document.querySelectorAll('.province-btn').forEach(pb => pb.classList.remove('expanded'));
+                    if (!isShow) {
+                        cityList.classList.add('show');
+                        btn.classList.add('expanded');
+                    }
+                };
+                const cityUl = document.createElement('ul');
+                cityUl.className = 'city-list';
+                cities.forEach(city => {
+                    const cityLi = document.createElement('li');
+                    cityLi.className = 'city-item';
+                    cityLi.textContent = city;
+                    cityLi.onclick = function(e) {
+                        e.stopPropagation();
+                        predictCity(city, province);
+                        document.querySelectorAll('.city-item').forEach(ci => ci.classList.remove('selected'));
+                        cityLi.classList.add('selected');
+                    };
+                    cityUl.appendChild(cityLi);
+                });
+                li.appendChild(btn);
+                li.appendChild(cityUl);
+                list.appendChild(li);
+            }
+        }
+        
+        function searchPredictCity() {
+            const text = document.getElementById('predictSearchInput').value;
+            renderPredictProvinces(text);
+        }
+        
+        async function predictCity(cityName, province) {
+            const panel = document.getElementById('predictRightPanel');
+            panel.innerHTML = '<div style="text-align:center;padding:50px;color:#1890ff;font-size:14px;">正在预测...请稍候</div>';
+            
+            try {
+                const response = await fetch('/api/cities/predict?cityname=' + encodeURIComponent(cityName));
+                const result = await response.json();
+                
+                if (result.code === 200 && result.data) {
+                    const data = result.data;
+                    const indicators = data.indicators;
+                    const predictionDate = data.prediction_date;
+                    
+                    // 计算AQI等级
+                    const aqi = indicators.aqi;
+                    const aqiClass = getAqiClass(aqi);
+                    const aqiLevel = getLevel(aqi);
+                    
+                    panel.innerHTML = `
+                        <div class="data-header">
+                            <div>
+                                <div class="data-title">${cityName}</div>
+                                <div class="data-subtitle">${province}</div>
+                            </div>
+                            <div class="aqi-badge ${aqiClass}">预测AQI: ${aqi.toFixed(1)} (${aqiLevel})</div>
+                        </div>
+                        <div class="data-grid">
+                            <div class="data-card"><div class="label">PM2.5</div><div class="value">${indicators.pm25.toFixed(1)}<span class="unit">μg/m³</span></div></div>
+                            <div class="data-card"><div class="label">PM10</div><div class="value">${indicators.pm10.toFixed(1)}<span class="unit">μg/m³</span></div></div>
+                            <div class="data-card"><div class="label">SO₂</div><div class="value">${indicators.so2.toFixed(1)}<span class="unit">μg/m³</span></div></div>
+                            <div class="data-card"><div class="label">NO₂</div><div class="value">${indicators.no2.toFixed(1)}<span class="unit">μg/m³</span></div></div>
+                            <div class="data-card"><div class="label">CO</div><div class="value">${indicators.co.toFixed(1)}<span class="unit">mg/m³</span></div></div>
+                            <div class="data-card"><div class="label">O₃</div><div class="value">${indicators.o3.toFixed(1)}<span class="unit">μg/m³</span></div></div>
+                            <div class="data-card"><div class="label">预测日期</div><div class="value" style="font-size:16px">2026-04-08</div></div>
+                        </div>
+                        <div class="chart-section">
+                            <div class="chart-title">预测数据可视化</div>
+                            <div id="chartPredict"></div>
+                        </div>
+                    `;
+                    
+                    // 渲染预测图表
+                    try {
+                        console.log('开始渲染预测图表，数据:', indicators);
+                        renderPredictChart(indicators);
+                        console.log('图表渲染完成');
+                    } catch (e) {
+                        console.error('图表渲染失败:', e);
+                        panel.innerHTML += '<div style="margin-top:10px;color:#f5222d;">图表渲染失败: ' + e.message + '</div>';
+                    }
+                } else {
+                    panel.innerHTML = `<div class="no-data">${result.msg || '预测失败'}</div>`;
+                }
+            } catch (e) {
+                console.error('预测失败:', e);
+                panel.innerHTML = '<div class="no-data">预测失败，请稍后重试</div>';
+            }
+        }
+        
+        function renderPredictChart(indicators) {
+            const chartContainer = document.getElementById('chartPredict');
+            if (!chartContainer) return;
+            
+            const chart = echarts.init(chartContainer);
+            
+            const indicatorNames = ['AQI', 'PM2.5', 'PM10', 'SO₂', 'NO₂', 'CO', 'O₃'];
+            const indicatorKeys = ['aqi', 'pm25', 'pm10', 'so2', 'no2', 'co', 'o3'];
+            const values = indicatorKeys.map(key => indicators[key]);
+            
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'shadow'
+                    },
+                    formatter: function(params) {
+                        return params[0].name + ': ' + params[0].value;
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: indicatorNames,
+                    axisLabel: {
+                        interval: 0,
+                        rotate: 45
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '数值'
+                },
+                series: [{
+                    name: '预测数据',
+                    type: 'bar',
+                    data: values,
+                    itemStyle: {
+                        color: function(params) {
+                            // 根据AQI值设置颜色，其他指标使用蓝色
+                            if (params.dataIndex === 0) {
+                                return getColor(params.value);
+                            }
+                            return '#1890ff';
+                        }
+                    },
+                    label: {
+                        show: true,
+                        position: 'top',
+                        formatter: function(params) {
+                            return params.value.toFixed(1);
+                        }
+                    }
+                }]
+            };
+            
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
+        }
+        
+        function getMaxValue(indicator, value) {
+            // 根据不同指标设置合适的最大值
+            const maxValues = {
+                'aqi': 500,
+                'pm25': 500,
+                'pm10': 600,
+                'so2': 500,
+                'no2': 200,
+                'co': 10,
+                'o3': 200
+            };
+            return maxValues[indicator] || 100;
+        }
+
+        async function loadHistoryData(cityName, start, end) {
+            try {
+                const chartContainer = document.getElementById('chartHistory');
+                if (!chartContainer) return;
+                chartContainer.style.display = 'block';
+                if (historyChart) { try { historyChart.dispose(); } catch(e) {} historyChart = null; }
+                chartContainer.innerHTML = '<div style="text-align:center;padding:50px;color:#1890ff;font-size:16px;">正在查询...</div>';
+                document.getElementById('historySource').innerHTML = '<span style="color:#666;">查询范围: ' + start + ' 至 ' + end + '</span> | 数据来源: <span style="color:#faad14;">正在查询...</span>';
+                const url = '/api/cities/history?cityname=' + encodeURIComponent(cityName) + '&start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end);
+                const res = await fetch(url);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const result = await res.json();
+                if (result.code === 200 && result.data && result.data.length > 0) {
+                    historyData = result.data;
+                    const sourceColor = result.source === '数据库' ? '#52c41a' : '#1890ff';
+                    document.getElementById('historySource').innerHTML = '<span style="color:#666;">查询范围: ' + result.start + ' 至 ' + result.end + ' (共' + result.data.length + '天)</span> | 来源: <span style="color:' + sourceColor + ';">' + result.source + '</span>';
+                    renderHistoryChart();
+                } else {
+                    historyData = [];
+                    document.getElementById('historySource').innerHTML = '<span style="color:#666;">查询范围: ' + start + ' 至 ' + end + '</span> | 数据来源: <span style="color:#f5222d;">暂无数据</span>';
+                    if (historyChart) { try { historyChart.clear(); } catch(e) {} }
+                    chartContainer.innerHTML = '<div class="no-data">该时间段(' + start + ' 至 ' + end + ')暂无数据<br>请尝试其他日期或点击"官网数据"查看实时数据</div>';
+                }
+            } catch (e) {
+                console.error('加载历史数据失败:', e);
+                historyData = [];
+                if (historyChart) { try { historyChart.clear(); } catch(e) {} }
+                const chartContainer = document.getElementById('chartHistory');
+                if (chartContainer) {
+                    document.getElementById('historySource').innerHTML = '<span style="color:#666;">查询范围: ' + start + ' 至 ' + end + '</span> | 数据来源: <span style="color:#f5222d;">请求失败</span>';
+                    chartContainer.innerHTML = '<div class="no-data">加载失败: ' + e.message + '<br><br>请检查网络连接后重试</div>';
+                }
+            }
+        }
+        
+        function renderHistoryChart() {
+            const chartContainer = document.getElementById('chartHistory');
+            if (!chartContainer) return;
+            if (historyChart) { try { historyChart.dispose(); } catch(e) {} historyChart = null; }
+            chartContainer.innerHTML = '';
+            historyChart = echarts.init(chartContainer);
+            const labels = ['AQI', 'PM2.5', 'PM10', 'SO₂', 'NO₂', 'CO', 'O₃'];
+            const indicatorIndex = ['aqi', 'pm25', 'pm10', 'so2', 'no2', 'co', 'o3'].indexOf(currentHistoryIndicator);
+            const dates = historyData.map(d => d.date);
+            const values = historyData.map(d => d[currentHistoryIndicator]);
+            const dataCount = dates.length;
+            const interval = dataCount > 15 ? Math.ceil(dataCount / 15) : 0;
+            const option = {
+                backgroundColor: 'transparent',
+                title: {
+                    text: '历史数据 (' + (dataCount > 0 ? dates[0] + ' 至 ' + dates[dataCount - 1] : '') + ')',
+                    left: 10, top: 5, textStyle: { fontSize: 14, color: '#333', fontWeight: 'normal' }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    textStyle: { color: '#333' },
+                    formatter: function(params) {
+                        const date = params[0].axisValue;
+                        const value = params[0].value;
+                        const level = getLevel(value);
+                        const color = getColor(value);
+                        return date + '<br/><span style="color:' + color + '">' + labels[indicatorIndex] + ': ' + value + '</span><br/><span style="color:#888">等级: ' + level + '</span>';
+                    }
+                },
+                grid: { left: 60, right: 30, top: 50, bottom: 60 },
+                xAxis: { 
+                    type: 'category', 
+                    data: dates, 
+                    axisLine: { lineStyle: { color: '#ccc' } }, 
+                    axisLabel: { color: '#666', rotate: dataCount > 10 ? 45 : 0, interval: interval },
+                    axisTick: { alignWithLabel: true }
+                },
+                yAxis: { type: 'value', name: labels[indicatorIndex], axisLine: { lineStyle: { color: '#ccc' } }, axisLabel: { color: '#888' }, splitLine: { lineStyle: { color: '#eee' } } },
+                series: [{
+                    name: labels[indicatorIndex],
+                    type: 'bar',
+                    data: values,
+                    itemStyle: { color: function(params) { return getColor(params.value); }, borderRadius: [4, 4, 0, 0] },
+                    emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.3)' } },
+                    barWidth: dataCount > 20 ? '50%' : '60%'
+                }]
+            };
+            historyChart.setOption(option);
+            window.addEventListener('resize', () => historyChart && historyChart.resize());
+        }
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadMap();
+            await fetchData();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  air-quality-api:
+    build: .
+    container_name: air-quality-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - TZ=Asia/Shanghai
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASSWORD=123456
+      - DB_NAME=air_quality
+    restart: always
+    depends_on:
+      - mysql
+    networks:
+      - air-quality-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: air-quality-mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql_init:/docker-entrypoint-initdb.d
+    environment:
+      - TZ=Asia/Shanghai
+      - MYSQL_ROOT_PASSWORD=123456
+      - MYSQL_DATABASE=air_quality
+    restart: always
+    networks:
+      - air-quality-network
+
+volumes:
+  mysql_data:
+
+networks:
+  air-quality-network:
+    driver: bridge
