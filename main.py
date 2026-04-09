@@ -11,8 +11,10 @@ import threading
 import torch
 import sys
 
-# 添加空气质量预测模块路径
-sys.path.append(os.path.join(os.path.dirname(__file__), '空气质量预测'))
+# 添加当前目录到Python路径，确保本地模块能够正确导入
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# 添加空气质量预测目录到Python路径
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), '空气质量预测'))
 from 数据集 import AirQualityDataset, INDICATORS, FEATURE_DIM, get_time_features
 from 省份空气质量模型 import AirQualityModel
 
@@ -222,8 +224,9 @@ try:
     with open(CITY_DATA_FILE, "r", encoding="utf-8") as f:
         CITIES_DATA = json.load(f)
     CITIES_DATA = {k: v for k, v in CITIES_DATA.items() if k not in EXCLUDE_REGIONS}
-except:
-    CITIES_DATA = {}
+except Exception as e:
+        print(f"加载城市数据失败: {e}")
+        CITIES_DATA = {}
 
 CITY_TO_PROVINCE = {}
 CITY_CACHE = {}
@@ -259,8 +262,6 @@ HEADERS = {
     "Origin": "http://152.136.239.96:3000",
     "X-Requested-With": "XMLHttpRequest",
 }
-
-import os
 
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
@@ -436,13 +437,14 @@ def save_to_db(records):
                     ),
                 )
                 count += 1
-            except:
+            except Exception as e:
                 pass
         conn.commit()
         cursor.close()
         conn.close()
         return count
-    except:
+    except Exception as e:
+        print(f"保存数据失败: {e}")
         return 0
 
 
@@ -466,7 +468,8 @@ def get_all_cities_with_data():
                 "data_count": row[3],
             }
         return cities_data
-    except:
+    except Exception as e:
+        print(f"获取城市数据失败: {e}")
         return {}
 
 
@@ -486,8 +489,8 @@ def delete_old_data():
         conn.close()
         if deleted > 0:
             print(f"  已删除 {deleted} 条过期数据(10天前)")
-    except:
-        pass
+    except Exception as e:
+        print(f"删除过期数据失败: {e}")
 
 
 def update_history_data():
@@ -602,9 +605,7 @@ def save_24h_data(records):
                 )
                 count += 1
             except Exception as e:
-                print(
-                    f"  插入失败: {record.get('city_name')}, {record.get('data_hour')}: {e}"
-                )
+                print(f"  插入失败: {record.get('city_name')}, {record.get('data_hour')}: {e}")
         conn.commit()
         cursor.close()
         conn.close()
@@ -641,9 +642,8 @@ def update_24h_data():
         for cn in city_names_to_try:
             try:
                 response = requests.get(
-                    "http://152.136.239.96:3000/api/air/batch-24h-data",
+                    f"http://152.136.239.96:3000/api/air/batch-24h-data?type=city&cityname={cn}",
                     headers=HEADERS,
-                    params={"cityname": cn, "type": "city"},
                     timeout=30,
                 )
                 result = response.json()
@@ -674,7 +674,7 @@ def update_24h_data():
                             values = indicators_data.get(ind, [])
                             record[ind] = values[j] if j < len(values) else None
                         records.append(record)
-                    except:
+                    except Exception:
                         continue
 
                 if records:
@@ -890,7 +890,7 @@ async def get_cities(save: bool = False):
                 CITY_CACHE[city_name] = item
                 CITY_CACHE[normalized] = item
                 filtered_data.append(item)
-            processed_data = filtered_data
+        processed_data = filtered_data
 
         with open("city_air_data.json", "w", encoding="utf-8") as f:
             json.dump(processed_data, f, ensure_ascii=False, indent=2)
@@ -926,9 +926,8 @@ async def get_city_24h(cityname: str):
 
         for cn in city_names_to_try:
             response = requests.get(
-                "http://152.136.239.96:3000/api/air/batch-24h-data",
+                f"http://152.136.239.96:3000/api/air/batch-24h-data?type=city&cityname={cn}",
                 headers=HEADERS,
-                params={"cityname": cn, "type": "city"},
                 timeout=30,
             )
             result = response.json()

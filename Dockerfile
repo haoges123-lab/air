@@ -1,20 +1,27 @@
-# 使用官方Python镜像作为基础镜像
 FROM python:3.9-slim
 
-# 设置工作目录
 WORKDIR /app
 
-# 复制依赖文件
+# 1. 设置全局 pip 源为清华源
+RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 2. 【关键】额外添加阿里云源作为备选（用于下载 numpy, jinja2 等依赖）
+# 注意：这里使用 --extra-index-url 而不是覆盖 index-url
+RUN pip config set global.extra-index-url https://mirrors.aliyun.com/pypi/simple/
+
 COPY requirements.txt .
 
-# 安装依赖
+# 3. 安装基础依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制应用代码
+# 4. 安装 PyTorch (指定 CPU 版)
+# 注意：PyTorch 官方源通常较慢，但依赖包现在会走阿里云源
+RUN pip install --no-cache-dir \
+    torch==2.4.1+cpu \
+    torchvision==0.19.1+cpu \
+    torchaudio==2.4.1+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+
 COPY . .
 
-# 暴露端口
-EXPOSE 8000
-
-# 启动应用
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
