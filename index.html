@@ -259,7 +259,138 @@
         .aqi-4 { background: #ff0000; color: #fff; }
         .aqi-5 { background: #99004c; color: #fff; }
         .aqi-6 { background: #7e0023; color: #fff; }
-        
+
+        /* 预测页面新样式 */
+        .predict-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .predict-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fff;
+        }
+        .predict-city .city-name {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .predict-city .city-province {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .predict-summary {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .aqi-main {
+            text-align: center;
+        }
+        .aqi-number {
+            font-size: 48px;
+            font-weight: bold;
+            line-height: 1;
+        }
+        .aqi-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .aqi-level-badge {
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            background: rgba(255,255,255,0.2);
+        }
+        .predict-date {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+        .predict-main {
+            display: flex;
+            gap: 20px;
+        }
+        .predict-charts {
+            flex: 1;
+        }
+        .chart-row {
+            display: flex;
+            gap: 20px;
+        }
+        .chart-box {
+            flex: 1;
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            height: 320px;
+        }
+        .predict-suggestion {
+            width: 280px;
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .suggestion-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        .suggestion-content {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.8;
+        }
+        .suggestion-text {
+            color: #333;
+            line-height: 1.8;
+        }
+        .predict-indicators {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 15px;
+        }
+        .indicator-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: transform 0.3s;
+        }
+        .indicator-card:hover {
+            transform: translateY(-3px);
+        }
+        .indicator-name {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        .indicator-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .indicator-unit {
+            font-size: 11px;
+            color: #999;
+            margin-top: 3px;
+        }
+        .indicator-level {
+            font-size: 12px;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+
         .data-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -1248,53 +1379,115 @@
         async function predictCity(cityName, province) {
             const panel = document.getElementById('predictRightPanel');
             panel.innerHTML = '<div style="text-align:center;padding:50px;color:#1890ff;font-size:14px;">正在预测...请稍候</div>';
-            
+
             try {
                 const response = await fetch('/api/cities/predict?cityname=' + encodeURIComponent(cityName));
                 const result = await response.json();
-                
+
                 if (result.code === 200 && result.data) {
                     const data = result.data;
                     const indicators = data.indicators;
                     const predictionDate = data.prediction_date;
-                    
+
                     // 计算AQI等级
                     const aqi = indicators.aqi;
                     const aqiClass = getAqiClass(aqi);
                     const aqiLevel = getLevel(aqi);
-                    
+                    const aqiColor = getColor(aqi);
+
+                    // 获取各指标颜色
+                    const pm25Color = getPollutantColor('pm25', indicators.pm25);
+                    const pm10Color = getPollutantColor('pm10', indicators.pm10);
+                    const so2Color = getPollutantColor('so2', indicators.so2);
+                    const no2Color = getPollutantColor('no2', indicators.no2);
+                    const coColor = getPollutantColor('co', indicators.co);
+                    const o3Color = getPollutantColor('o3', indicators.o3);
+
                     panel.innerHTML = `
-                        <div class="data-header">
-                            <div>
-                                <div class="data-title">${cityName}</div>
-                                <div class="data-subtitle">${province}</div>
+                        <div class="predict-container">
+                            <div class="predict-header">
+                                <div class="predict-city">
+                                    <div class="city-name">${cityName}</div>
+                                    <div class="city-province">${province}</div>
+                                </div>
+                                <div class="predict-summary">
+                                    <div class="aqi-main">
+                                        <div class="aqi-number" style="color:${aqiColor}">${aqi.toFixed(0)}</div>
+                                        <div class="aqi-label">AQI</div>
+                                    </div>
+                                    <div class="aqi-level-badge ${aqiClass}">${aqiLevel}</div>
+                                    <div class="predict-date">${predictionDate} 空气质量预测</div>
+                                </div>
                             </div>
-                            <div class="aqi-badge ${aqiClass}">预测AQI: ${aqi.toFixed(1)} (${aqiLevel})</div>
-                        </div>
-                        <div class="data-grid">
-                            <div class="data-card"><div class="label">PM2.5</div><div class="value">${indicators.pm25.toFixed(1)}<span class="unit">μg/m³</span></div></div>
-                            <div class="data-card"><div class="label">PM10</div><div class="value">${indicators.pm10.toFixed(1)}<span class="unit">μg/m³</span></div></div>
-                            <div class="data-card"><div class="label">SO₂</div><div class="value">${indicators.so2.toFixed(1)}<span class="unit">μg/m³</span></div></div>
-                            <div class="data-card"><div class="label">NO₂</div><div class="value">${indicators.no2.toFixed(1)}<span class="unit">μg/m³</span></div></div>
-                            <div class="data-card"><div class="label">CO</div><div class="value">${indicators.co.toFixed(1)}<span class="unit">mg/m³</span></div></div>
-                            <div class="data-card"><div class="label">O₃</div><div class="value">${indicators.o3.toFixed(1)}<span class="unit">μg/m³</span></div></div>
-                            <div class="data-card"><div class="label">预测日期</div><div class="value" style="font-size:16px">2026-04-08</div></div>
-                        </div>
-                        <div class="chart-section">
-                            <div class="chart-title">预测数据可视化</div>
-                            <div id="chartPredict"></div>
+
+                            <div class="predict-indicators">
+                                <div class="indicator-card" style="border-left:4px solid ${pm25Color}">
+                                    <div class="indicator-name">PM2.5</div>
+                                    <div class="indicator-value" style="color:${pm25Color}">${indicators.pm25.toFixed(1)}</div>
+                                    <div class="indicator-unit">μg/m³</div>
+                                    <div class="indicator-level" style="color:${pm25Color}">${getPollutantLevel('pm25', indicators.pm25)}</div>
+                                </div>
+                                <div class="indicator-card" style="border-left:4px solid ${pm10Color}">
+                                    <div class="indicator-name">PM10</div>
+                                    <div class="indicator-value" style="color:${pm10Color}">${indicators.pm10.toFixed(1)}</div>
+                                    <div class="indicator-unit">μg/m³</div>
+                                    <div class="indicator-level" style="color:${pm10Color}">${getPollutantLevel('pm10', indicators.pm10)}</div>
+                                </div>
+                                <div class="indicator-card" style="border-left:4px solid ${so2Color}">
+                                    <div class="indicator-name">SO₂</div>
+                                    <div class="indicator-value" style="color:${so2Color}">${indicators.so2.toFixed(1)}</div>
+                                    <div class="indicator-unit">μg/m³</div>
+                                    <div class="indicator-level" style="color:${so2Color}">${getPollutantLevel('so2', indicators.so2)}</div>
+                                </div>
+                                <div class="indicator-card" style="border-left:4px solid ${no2Color}">
+                                    <div class="indicator-name">NO₂</div>
+                                    <div class="indicator-value" style="color:${no2Color}">${indicators.no2.toFixed(1)}</div>
+                                    <div class="indicator-unit">μg/m³</div>
+                                    <div class="indicator-level" style="color:${no2Color}">${getPollutantLevel('no2', indicators.no2)}</div>
+                                </div>
+                                <div class="indicator-card" style="border-left:4px solid ${coColor}">
+                                    <div class="indicator-name">CO</div>
+                                    <div class="indicator-value" style="color:${coColor}">${indicators.co.toFixed(2)}</div>
+                                    <div class="indicator-unit">mg/m³</div>
+                                    <div class="indicator-level" style="color:${coColor}">${getPollutantLevel('co', indicators.co)}</div>
+                                </div>
+                                <div class="indicator-card" style="border-left:4px solid ${o3Color}">
+                                    <div class="indicator-name">O₃</div>
+                                    <div class="indicator-value" style="color:${o3Color}">${indicators.o3.toFixed(1)}</div>
+                                    <div class="indicator-unit">μg/m³</div>
+                                    <div class="indicator-level" style="color:${o3Color}">${getPollutantLevel('o3', indicators.o3)}</div>
+                                </div>
+                            </div>
+
+                            <div class="predict-main">
+                                <div class="predict-charts">
+                                    <div class="chart-row">
+                                        <div class="chart-box" id="chartRadar"></div>
+                                        <div class="chart-box" id="chartBar"></div>
+                                    </div>
+                                </div>
+
+                                <div class="predict-suggestion" id="predictSuggestion">
+                                    <div class="suggestion-title">健康建议</div>
+                                    <div class="suggestion-content">
+                                        <div style="text-align:center;padding:30px;color:#999;">正在获取建议...</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     `;
-                    
-                    // 渲染预测图表
+
+                    // 渲染图表
                     try {
-                        console.log('开始渲染预测图表，数据:', indicators);
-                        renderPredictChart(indicators);
-                        console.log('图表渲染完成');
+                        renderPredictRadar(indicators);
+                        renderPredictBar(indicators);
                     } catch (e) {
                         console.error('图表渲染失败:', e);
-                        panel.innerHTML += '<div style="margin-top:10px;color:#f5222d;">图表渲染失败: ' + e.message + '</div>';
                     }
+
+                    // 生成健康建议
+                    fetchAirQualitySuggestion(cityName, indicators, aqiLevel);
+
                 } else {
                     panel.innerHTML = `<div class="no-data">${result.msg || '预测失败'}</div>`;
                 }
@@ -1303,85 +1496,322 @@
                 panel.innerHTML = '<div class="no-data">预测失败，请稍后重试</div>';
             }
         }
-        
-        function renderPredictChart(indicators) {
-            const chartContainer = document.getElementById('chartPredict');
-            if (!chartContainer) return;
-            
-            const chart = echarts.init(chartContainer);
-            
-            const indicatorNames = ['AQI', 'PM2.5', 'PM10', 'SO₂', 'NO₂', 'CO', 'O₃'];
-            const indicatorKeys = ['aqi', 'pm25', 'pm10', 'so2', 'no2', 'co', 'o3'];
-            const values = indicatorKeys.map(key => indicators[key]);
-            
+
+        // 根据污染物浓度获取颜色（气象局标准）
+        function getPollutantColor(pollutant, value) {
+            const thresholds = {
+                'pm25': [35, 75, 115, 150, 250],      // 优/良/轻度/中度/重度
+                'pm10': [50, 150, 250, 350, 420],      // 优/良/轻度/中度/重度
+                'so2': [50, 150, 475, 800, 1600],     // 优/良/轻度/中度/重度
+                'no2': [40, 80, 180, 280, 565],       // 优/良/轻度/中度/重度
+                'co': [2, 4, 14, 24, 36],             // 优/良/轻度/中度/重度 (mg/m³)
+                'o3': [100, 160, 215, 265, 800]        // 优/良/轻度/中度/重度
+            };
+            const colors = ['#00e400', '#ffff00', '#ff7e00', '#ff0000', '#99004c', '#7e0023'];
+            const t = thresholds[pollutant];
+            if (!t) return '#1890ff';
+            for (let i = 0; i < t.length; i++) {
+                if (value <= t[i]) return colors[i];
+            }
+            return colors[colors.length - 1];
+        }
+
+        // 获取污染物等级描述
+        function getPollutantLevel(pollutant, value) {
+            const thresholds = {
+                'pm25': [35, 75, 115, 150, 250],
+                'pm10': [50, 150, 250, 350, 420],
+                'so2': [50, 150, 475, 800, 1600],
+                'no2': [40, 80, 180, 280, 565],
+                'co': [2, 4, 14, 24, 36],
+                'o3': [100, 160, 215, 265, 800]
+            };
+            const levels = ['优', '良', '轻度污染', '中度污染', '重度污染', '严重污染'];
+            const t = thresholds[pollutant];
+            if (!t) return '未知';
+            for (let i = 0; i < t.length; i++) {
+                if (value <= t[i]) return levels[i];
+            }
+            return levels[levels.length - 1];
+        }
+
+        // 获取空气质量AI建议
+        async function fetchAirQualitySuggestion(cityName, indicators, aqiLevel) {
+            const suggestionBox = document.getElementById('predictSuggestion');
+            if (!suggestionBox) return;
+
+            // 本地建议生成函数
+            function buildLocalSuggestion() {
+                const severe = [];
+                const moderate = [];
+                const mild = [];
+
+                if (indicators.pm25 > 150) severe.push('PM2.5');
+                else if (indicators.pm25 > 75) moderate.push('PM2.5');
+                else if (indicators.pm25 > 35) mild.push('PM2.5');
+
+                if (indicators.pm10 > 250) severe.push('PM10');
+                else if (indicators.pm10 > 150) moderate.push('PM10');
+                else if (indicators.pm10 > 50) mild.push('PM10');
+
+                if (indicators.o3 > 265) severe.push('O₃');
+                else if (indicators.o3 > 160) moderate.push('O₃');
+                else if (indicators.o3 > 100) mild.push('O₃');
+
+                if (indicators.no2 > 180) severe.push('NO₂');
+                else if (indicators.no2 > 80) moderate.push('NO₂');
+
+                if (indicators.so2 > 475) severe.push('SO₂');
+                else if (indicators.so2 > 150) moderate.push('SO₂');
+
+                if (indicators.co > 14) severe.push('CO');
+                else if (indicators.co > 4) moderate.push('CO');
+
+                let suggestion = '';
+                if (aqiLevel === '优') {
+                    suggestion = `空气质量优秀！各指标均处于良好水平，空气清新，适宜所有人群进行户外活动和开窗通风。`;
+                } else if (aqiLevel === '良') {
+                    const issues = mild.length > 0 ? mild.join('、') + '略高' : '个别指标偏高';
+                    suggestion = `空气质量良好，${issues}，整体影响不大。可以正常进行户外活动，但仍可保持空气净化习惯。`;
+                } else if (aqiLevel === '轻度污染') {
+                    const main = moderate.length > 0 ? moderate.join('、') : '部分污染物';
+                    suggestion = `空气质量${aqiLevel}，${main}为主要污染物。敏感人群（如老人、儿童）建议减少户外时间，户外活动可佩戴普通口罩。`;
+                } else if (aqiLevel === '中度污染') {
+                    const main = severe.length > 0 ? severe.join('、') : moderate.join('、');
+                    suggestion = `空气质量较差，${main}超标明显。建议减少户外活动，避免剧烈运动；外出请佩戴N95等防护口罩，室内建议开启空气净化设备。`;
+                } else if (aqiLevel === '重度污染') {
+                    suggestion = `空气质量严重污染！${severe.join('、')}严重超标。健康风险较高，建议尽量待在室内，关闭门窗；如必须外出请佩戴专业防护口罩。`;
+                } else {
+                    suggestion = `空气质量极其危险！多种污染物严重超标。建议所有人待在室内，避免一切户外活动，必要时可用湿毛巾覆盖口鼻。`;
+                }
+                return suggestion;
+            }
+
+            try {
+                const prompt = `你是一位中国空气质量健康专家。请根据以下${cityName}的空气质量预测数据，给出简洁实用的健康建议（80字以内）：
+
+AQI等级：${aqiLevel}
+PM2.5：${indicators.pm25.toFixed(1)} μg/m³（优≤35良≤75轻度≤115中度≤150重度≤250严重>250）
+PM10：${indicators.pm10.toFixed(1)} μg/m³（优≤50良≤150轻度≤250中度≤350重度≤420严重>420）
+SO₂：${indicators.so2.toFixed(1)} μg/m³
+NO₂：${indicators.no2.toFixed(1)} μg/m³
+CO：${indicators.co.toFixed(2)} mg/m³
+O₃：${indicators.o3.toFixed(1)} μg/m³
+
+请给出：1）今日总体空气质量评价；2）主要污染物问题；3）针对不同人群的具体建议。用中文回复，条理清晰。`;
+
+                const response = await fetch("http://openai.motanni.top:3000/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer sk-TOba4qZhFWkIHIGjUe47NOuGMh8kuzuFM01CQ2UZmRyFWUSV"
+                    },
+                    body: JSON.stringify({
+                        model: "MiniMax-M2.7-highspeed",
+                        messages: [{"role": "user", "content": prompt}],
+                        max_tokens: 200,
+                        temperature: 0.7
+                    }),
+                });
+
+                if (!response.ok) throw new Error('API请求失败');
+
+                const result = await response.json();
+                const suggestion = result.choices?.[0]?.message?.content?.trim();
+
+                if (suggestion) {
+                    suggestionBox.querySelector('.suggestion-content').innerHTML = `
+                        <div class="suggestion-text">${suggestion.replace(/\n/g, '<br>')}</div>
+                    `;
+                } else {
+                    throw new Error('空响应');
+                }
+            } catch (e) {
+                console.error('获取建议失败，使用本地建议:', e);
+                const localSuggestion = buildLocalSuggestion();
+                suggestionBox.querySelector('.suggestion-content').innerHTML = `
+                    <div class="suggestion-text">${localSuggestion}</div>
+                `;
+            }
+        }
+
+        function renderPredictRadar(indicators) {
+            const container = document.getElementById('chartRadar');
+            if (!container) return;
+
+            const chart = echarts.init(container);
+
+            const indicatorNames = ['PM2.5', 'PM10', 'SO₂', 'NO₂', 'CO', 'O₃'];
+            const indicatorKeys = ['pm25', 'pm10', 'so2', 'no2', 'co', 'o3'];
+            // 严重污染阈值作为最大值
+            const severeThreshold = {
+                'pm25': 250, 'pm10': 420, 'so2': 1600,
+                'no2': 565, 'co': 36, 'o3': 800
+            };
+
+            const values = indicatorKeys.map(key => {
+                const val = indicators[key];
+                const threshold = severeThreshold[key] || 100;
+                const pct = (val / threshold) * 100;
+                return parseFloat(pct.toFixed(1));
+            });
+
             const option = {
                 backgroundColor: 'transparent',
+                title: {
+                    text: '各指标污染程度占比',
+                    subtext: '以严重污染阈值为100%标准',
+                    left: 'center',
+                    top: 5,
+                    textStyle: { fontSize: 13, fontWeight: 'normal', color: '#333' },
+                    subtextStyle: { fontSize: 10, color: '#999' }
+                },
                 tooltip: {
-                    trigger: 'axis',
-                    axisPointer: {
-                        type: 'shadow'
-                    },
+                    trigger: 'item',
                     formatter: function(params) {
-                        return params[0].name + ': ' + params[0].value;
+                        const key = indicatorKeys[params.dataIndex];
+                        const val = indicators[key];
+                        const threshold = severeThreshold[key];
+                        const pct = (val / threshold) * 100;
+                        const level = getPollutantLevel(key, val);
+                        const unit = key === 'co' ? 'mg/m³' : 'μg/m³';
+                        return `${params.name}<br/>污染程度: ${pct.toFixed(1)}%<br/>实际浓度: ${val.toFixed(1)} ${unit}<br/>严重标准: ${threshold} ${unit}<br/>等级: ${level}`;
                     }
                 },
-                grid: {
-                    left: '3%',
-                    right: '4%',
-                    bottom: '3%',
-                    containLabel: true
-                },
-                xAxis: {
-                    type: 'category',
-                    data: indicatorNames,
-                    axisLabel: {
-                        interval: 0,
-                        rotate: 45
-                    }
-                },
-                yAxis: {
-                    type: 'value',
-                    name: '数值'
+                radar: {
+                    indicator: indicatorNames.map((name, i) => ({
+                        name: name,
+                        max: 100
+                    })),
+                    radius: '65%',
+                    splitNumber: 5,
+                    axisName: { color: '#666', fontSize: 12 },
+                    splitLine: { lineStyle: { color: '#e0e0e0' } },
+                    splitArea: { areaStyle: { color: ['#fff', '#f8f8f8'] } },
+                    axisLine: { lineStyle: { color: '#ccc' } }
                 },
                 series: [{
-                    name: '预测数据',
-                    type: 'bar',
-                    data: values,
-                    itemStyle: {
-                        color: function(params) {
-                            // 根据AQI值设置颜色，其他指标使用蓝色
-                            if (params.dataIndex === 0) {
-                                return getColor(params.value);
+                    type: 'radar',
+                    data: [{
+                        value: values,
+                        name: '污染程度%',
+                        itemStyle: { color: '#1890ff' },
+                        areaStyle: { color: 'rgba(24, 144, 255, 0.25)' },
+                        label: {
+                            show: true,
+                            formatter: function(params) {
+                                const v = params.value;
+                                if (v > 100) return '超标';
+                                return v.toFixed(0) + '%';
+                            },
+                            fontSize: 10,
+                            color: function(params) {
+                                return params.value > 100 ? '#ff0000' : '#333';
                             }
-                            return '#1890ff';
                         }
-                    },
-                    label: {
-                        show: true,
-                        position: 'top',
-                        formatter: function(params) {
-                            return params.value.toFixed(1);
-                        }
-                    }
+                    }]
                 }]
             };
-            
+
             chart.setOption(option);
             window.addEventListener('resize', () => chart.resize());
         }
-        
-        function getMaxValue(indicator, value) {
-            // 根据不同指标设置合适的最大值
-            const maxValues = {
-                'aqi': 500,
-                'pm25': 500,
-                'pm10': 600,
-                'so2': 500,
-                'no2': 200,
-                'co': 10,
-                'o3': 200
+
+        function renderPredictBar(indicators) {
+            const container = document.getElementById('chartBar');
+            if (!container) return;
+
+            const chart = echarts.init(container);
+
+            const indicatorNames = ['PM2.5', 'PM10', 'SO₂', 'NO₂', 'CO', 'O₃'];
+            const indicatorKeys = ['pm25', 'pm10', 'so2', 'no2', 'co', 'o3'];
+            // 严重污染阈值作为最大值
+            const severeThreshold = {
+                'pm25': 250, 'pm10': 420, 'so2': 1600,
+                'no2': 565, 'co': 36, 'o3': 800
             };
-            return maxValues[indicator] || 100;
+            const units = {
+                'pm25': 'μg/m³', 'pm10': 'μg/m³', 'so2': 'μg/m³',
+                'no2': 'μg/m³', 'co': 'mg/m³', 'o3': 'μg/m³'
+            };
+
+            // 将原始值转为相对严重标准的百分比
+            const percentValues = indicatorKeys.map(key => {
+                const val = indicators[key];
+                const pct = (val / severeThreshold[key]) * 100;
+                return parseFloat(pct.toFixed(1));
+            });
+
+            const maxPct = Math.max(...percentValues);
+            const overallMax = maxPct > 100 ? maxPct * 1.1 : 100;
+
+            const option = {
+                backgroundColor: 'transparent',
+                title: {
+                    text: '各污染物浓度（严重污染标准）',
+                    subtext: '红色虚线为严重污染标准线(100%)',
+                    left: 'center',
+                    top: 5,
+                    textStyle: { fontSize: 13, fontWeight: 'normal', color: '#333' },
+                    subtextStyle: { fontSize: 10, color: '#999' }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'shadow' },
+                    formatter: function(params) {
+                        const key = indicatorKeys[params[0].dataIndex];
+                        const val = indicators[key];
+                        const pct = percentValues[params[0].dataIndex];
+                        const level = getPollutantLevel(key, val);
+                        return `${params[0].name}<br/>浓度: ${val.toFixed(1)} ${units[key]}<br/>相对标准: ${pct.toFixed(1)}%<br/>等级: ${level}`;
+                    }
+                },
+                grid: { left: '3%', right: '8%', bottom: '8%', top: '22%', containLabel: true },
+                xAxis: {
+                    type: 'category',
+                    data: indicatorNames,
+                    axisLabel: { interval: 0, fontSize: 11, color: '#666' }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '相对标准%',
+                    nameTextStyle: { fontSize: 11 },
+                    max: overallMax
+                },
+                series: [
+                    {
+                        name: '严重污染标准',
+                        type: 'line',
+                        data: indicatorKeys.map(() => 100),
+                        lineStyle: { color: '#ff0000', type: 'dashed', width: 2 },
+                        itemStyle: { opacity: 0 },
+                        label: { show: true, position: 'right', formatter: '100%', fontSize: 9, color: '#ff0000' },
+                        tooltip: { show: false }
+                    },
+                    {
+                        type: 'bar',
+                        data: percentValues,
+                        itemStyle: {
+                            color: function(params) {
+                                const key = indicatorKeys[params.dataIndex];
+                                return getPollutantColor(key, indicators[key]);
+                            }
+                        },
+                        label: {
+                            show: true,
+                            position: 'top',
+                            fontSize: 10,
+                            formatter: function(params) {
+                                return params.value.toFixed(0) + '%';
+                            }
+                        },
+                        barMaxWidth: 45
+                    }
+                ]
+            };
+
+            chart.setOption(option);
+            window.addEventListener('resize', () => chart.resize());
         }
 
         async function loadHistoryData(cityName, start, end) {
