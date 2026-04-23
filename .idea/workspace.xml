@@ -5,8 +5,27 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2a5b176b-313f-4a37-abcc-b598556cf15c" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.claude/settings.local.json" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/city_air_data.json" beforeDir="false" afterPath="$PROJECT_DIR$/city_air_data.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/AGENTS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/check_missing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/find_small.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/quick_test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/分析误差.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/填充海南数据.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/对比误差.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/数据集_趋势.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/朴素基准.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/模型分析报告.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/模型集成.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/测试api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/补充青海数据.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/补全海南数据.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/超参数搜索.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/空气质量预测/集成寻优.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,6 +79,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -185,6 +205,9 @@
       <workItem from="1775093727852" duration="31000" />
       <workItem from="1775705382558" duration="424000" />
       <workItem from="1776050428208" duration="28000" />
+      <workItem from="1776653899800" duration="732000" />
+      <workItem from="1776835150919" duration="2501000" />
+      <workItem from="1776914240337" duration="928000" />
     </task>
     <servers />
   </component>

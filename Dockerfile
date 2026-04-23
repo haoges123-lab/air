@@ -1,12 +1,11 @@
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
 # 1. 设置全局 pip 源为清华源
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
-# 2. 【关键】额外添加阿里云源作为备选（用于下载 numpy, jinja2 等依赖）
-# 注意：这里使用 --extra-index-url 而不是覆盖 index-url
+
 RUN pip config set global.extra-index-url https://mirrors.aliyun.com/pypi/simple/
 
 COPY requirements.txt .
